@@ -134,7 +134,9 @@ def from_quantized(
     
     init_contexts = [transformers.modeling_utils.no_init_weights(), accelerate.init_empty_weights(include_buffers=False)]
     with transformers.utils.ContextManagers(init_contexts):
-        config = config_cls.from_pretrained(model_name_or_path)
+        # config = config_cls.from_pretrained(model_name_or_path)
+        model_save_path = "/data/zengchangyang/mymodels"
+        config = config_cls.from_pretrained(model_name_or_path,cache_dir = model_save_path)
         model = model_cls._from_config(config, torch_dtype=torch_dtype)
         make_quant(model)
         model.tie_weights()

@@ -17,7 +17,9 @@ def get_wikitext2(seqlen, model):
     testdata = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test')
 
     from transformers import AutoTokenizer 
-    tokenizer = AutoTokenizer.from_pretrained(model, padding_side='right', use_fast=False, trust_remote_code=True)
+    model_save_path = "/data/zengchangyang/mymodels"
+    
+    tokenizer = AutoTokenizer.from_pretrained(model,cache_dir = model_save_path, padding_side='right', use_fast=False, trust_remote_code=True)
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = 0
     
@@ -33,12 +35,22 @@ def get_wikitext2(seqlen, model):
 
 def get_c4(seqlen, model):
     from datasets import load_dataset
+    print("loading c4...")
+    # valdata = load_dataset(
+    #     'allenai/c4', 'en', 
+    #     data_files={'validation': '/data/zengchangyang/mydatas/cherryqData/val_data_c4/c4-validation.00000-of-00008.json.gz'}, 
+    #     split='validation'
+    # )
     valdata = load_dataset(
-        'allenai/c4', 'en', data_files={'validation': 'en/c4-validation.00000-of-00008.json.gz'}, split='validation'
+        'json',  # 指定文件类型为 JSON
+        data_files={'validation': '/data/zengchangyang/mydatas/cherryqData/val_data_c4/c4-validation.00000-of-00008.json.gz'},
+        split='validation'
     )
 
     from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model, padding_side='right', use_fast=False, trust_remote_code=True)
+    model_save_path = "/data/zengchangyang/mymodels"
+    
+    tokenizer = AutoTokenizer.from_pretrained(model,cache_dir = model_save_path, padding_side='right', use_fast=False, trust_remote_code=True)
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = 0
     
@@ -101,6 +113,7 @@ def main(
 ):
     from cherryq.utils import from_quantized
     model = from_quantized(quant_model_path, torch_dtype=torch.float16, device_map={'': 0})
+    print(model)
     model.eval()
     model.config.use_cache = False
 
@@ -108,7 +121,7 @@ def main(
     
     with QuantLinear.dmode(layerwise_dequantize=False):
         eval_ppl(model, get_loaders('c4', model=tokenizer_path))
-        eval_ppl(model, get_loaders('wikitext2', model=tokenizer_path))
+        # eval_ppl(model, get_loaders('wikitext2', model=tokenizer_path))
     
     
 if __name__ == '__main__':

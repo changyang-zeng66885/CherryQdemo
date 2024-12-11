@@ -1,4 +1,5 @@
 import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3,4,5,6,7"  
 from typing import Union, Optional
 
 import torch
@@ -11,6 +12,8 @@ from cherryq.models.llama.modeling_llama_quant import LlamaForCausalLM
 from cherryq.training.trainer import Trainer
 from cherryq.utils import pack_model, save_quantized
 import utils
+
+# from get_free_gpus import get_free_gpus
 
 logger = utils.get_logger(__name__)
 
@@ -48,13 +51,19 @@ def train(
     cherry_indices_file: Optional[str] = None, # Naive QAT if `cherry_indices_file` is None, otherwise CherryQ
     cherry_fraction: float = 1/256,
 ):  
+    
+    # os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'      
     device_id = int(os.environ.get('LOCAL_RANK', 0))
+    print(f"device_id:{device_id}")
     train_data = load_from_disk(data_path)
     
     
     logger.info("Start to load tokenizer...")
+    model_save_path = "/data/zengchangyang/mymodels"
     tokenizer = transformers.AutoTokenizer.from_pretrained(
-        base_model, padding_side="right", use_fast=False, trust_remote_code=True
+        base_model,
+        cache_dir = model_save_path, 
+        padding_side="right", use_fast=False, trust_remote_code=True
     )
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = 0
@@ -65,17 +74,27 @@ def train(
     
     
     logger.info("Start to load model...")
-    config: LlamaConfig = LlamaConfig.from_pretrained(base_model)
+    config: LlamaConfig = LlamaConfig.from_pretrained(base_model,cache_dir = model_save_path)
     config.pretraining_tp = 1
     config.w_bits = w_bits
     config.group_size = group_size
     config.cherryq = cherryq = cherry_indices_file is not None
     config.cherry_fraction = cherry_fraction
+    print(f"device_id:{device_id}")
+    
+    bf16 = torch.cuda.get_device_capability()[0] >= 8
+    fp16 = not bf16
+    
+    print(f"bf16:{bf16} fp16:{fp16} device_capability{torch.cuda.get_device_capability()[0]}")
+    
     model = LlamaForCausalLM.from_pretrained(
         pretrained_model_name_or_path=base_model,
+        cache_dir = model_save_path,
         config=config,
         attn_implementation="flash_attention_2",
         device_map={'': device_id},
+        # torch_dtype=torch.float16
+        torch_dtype=torch.bfloat16 if bf16 else torch.float16
     )
     logger.info(model.config)
     
@@ -95,8 +114,8 @@ def train(
         os.environ["WANDB_PROJECT"] = wandb_project
         
     
-    bf16 = torch.cuda.get_device_capability()[0] >= 8
-    fp16 = not bf16
+    
+    
     training_args = transformers.trainer.TrainingArguments(
         output_dir=output_dir,
         seed=42,
@@ -132,7 +151,6 @@ def train(
         for name, module in model.named_modules():
             if isinstance(module, QuantLinear):
                 module.register_cherry_indices(cherry_indices_mapping[name])
-    
                 
     trainer = Trainer(
         model=model,
@@ -141,7 +159,7 @@ def train(
         data_collator=collator,
         min_warmup_ratio=min_warmup_ratio
     )
-    
+    print("start training...")
     trainer.train(resume_from_checkpoint=resume_from_checkpoint)
     trainer.save_model()
 

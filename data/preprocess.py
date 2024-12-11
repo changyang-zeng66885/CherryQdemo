@@ -27,19 +27,26 @@ def load_data(in_file, max_recursion_depth=1):
                 data.append(json.loads(line.strip()))
     elif os.path.isdir(in_file) and max_recursion_depth > 0:
         data = []
+        count = 0  # 添加计数器 【仅供demo使用】
         for file_or_folder in os.listdir(in_file):
+            if count >= 1024:  # 达到1024条数据后停止加载【仅供demo使用】
+                break
             data.extend(
                 load_data(os.path.join(in_file, file_or_folder), max_recursion_depth - 1)
             )
+            count += len(data)  # 更新计数器【仅供demo使用】
     else:
         raise ValueError(f"Loading script for {in_file} is not implemented.")
     
+    data = data[:10000]
+    print(f"Loaded {len(data)} samples.")
     return data
 
 
 def main(args):
+    model_path = "/data/zengchangyang/mymodels" # 模型保存的路径
     tokenizer = AutoTokenizer.from_pretrained(
-        args.model_path, revision=args.revision, use_fast=False, trust_remote_code=True # Whether or not to allow for custom models defined on the Hub executing code on your local machine
+        args.model_path,cache_dir = model_path, revision=args.revision, use_fast=False, trust_remote_code=True # Whether or not to allow for custom models defined on the Hub executing code on your local machine
     )
     
     def tokenize(data_point):

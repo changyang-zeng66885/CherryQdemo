@@ -1,7 +1,7 @@
 torchrun --nproc_per_node=8 --master_port=14302 train.py \
     --base_model NousResearch/Llama-2-7b-hf \
-    --data_path data/processed_data/c4_processed_50k \
-    --output_dir output \
+    --data_path /data/zengchangyang/mydatas/cherryqData/processed_data/c4_processed_50k_small200 \
+    --output_dir /data/zengchangyang/mydatas/cherryqData/output_small200 \
     --num_epochs 1 \
     --micro_batch_size 8 \
     --gradient_accumulation_steps 2 \

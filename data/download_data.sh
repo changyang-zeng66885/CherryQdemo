@@ -8,5 +8,5 @@ for i in {0..3}; do
 done
 
 # calibration dataset for chat model
-wget -P raw_data/chat \
-    https://hf-mirror.com/datasets/wql/sharegpt_cleaned_20k/resolve/main/sharegpt_cleaned_20k.jsonl
+# wget -P raw_data/chat \
+#     https://hf-mirror.com/datasets/wql/sharegpt_cleaned_20k/resolve/main/sharegpt_cleaned_20k.jsonl
